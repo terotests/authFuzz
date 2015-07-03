@@ -2,7 +2,7 @@
 
 Simple authentication filesystem and authentication emulator for simple filesystem based interfaces and testing purposes.
 
-The user account information is encoded with `SHA-3` algorithm. 
+The user account information is encoded with `SHA-3` [algorithm](https://github.com/terotests/_sha3). 
 
 The filesystem hashes all the usernames and passwords with salt so that none of the information can be read directly from the serialized format.
 
