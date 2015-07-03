@@ -1284,31 +1284,26 @@
         };
 
         /**
-         * @param string userName
+         * @param string userId
          * @param float groupName
          */
-        _myTrait_.addUserToGroup = function (userName, groupName) {
-          var groupHash = this.hash(groupName);
-          var userHash = this.hash(userName);
+        _myTrait_.addUserToGroup = function (userId, groupName) {
+
           var local = this._users,
               me = this;
-          var groupFile = userHash + '-groups';
+
+          // local and udata...
+          var local = me._users;
+          var udata = me._udata;
 
           return _promise(function (result) {
-            local.readFile(groupFile).then(function (lines) {
-              var list = lines.split('\n');
-              var bWasIn = false;
-              list.forEach(function (gid) {
-                if (gid == groupHash) bWasIn = true;
-              });
-              if (bWasIn) {
-                result({
-                  result: true,
-                  text: 'User already in group'
-                });
-              } else {
-                return local.appendFile(groupFile, groupHash + '\n');
-              }
+            udata.readFile(userId).then(function (jsonData) {
+
+              var data = JSON.parse(jsonData);
+
+              if (data.groups.indexOf(groupName) < 0) data.groups.push(groupName);
+
+              return udata.writeFile(userId, JSON.stringify(data));
             }).then(function () {
               result({
                 result: true,
@@ -1371,7 +1366,8 @@
                 return udata.writeFile(id, JSON.stringify(userData));
               }).then(function () {
                 result({
-                  result: true
+                  result: true,
+                  userId: id
                 });
               });
             });

@@ -1474,32 +1474,33 @@ return reader;
     
 ```
 
-### <a name="authFuzz_addUserToGroup"></a>authFuzz::addUserToGroup(userName, groupName)
+### <a name="authFuzz_addUserToGroup"></a>authFuzz::addUserToGroup(userId, groupName)
 
 
 ```javascript
-var groupHash = this.hash( groupName );
-var userHash  = this.hash( userName );
+
 var local = this._users, me = this;
-var groupFile = userHash+"-groups";
+
+// local and udata...
+var local = me._users;
+var udata = me._udata;
 
 return _promise(
     function(result) {
-        local.readFile(groupFile).then( function(lines) {
-            var list = lines.split("\n");
-            var bWasIn = false;
-            list.forEach( function(gid) {
-                if(gid == groupHash) bWasIn = true;
-            });
-            if(bWasIn) {
-                result( { result : true, text : "User already in group"});            
-            } else {
-                return local.appendFile(groupFile, groupHash+"\n");
-            }
+        udata.readFile(userId).then( function(jsonData) {
+            
+            var data = JSON.parse( jsonData );
+            
+            if(data.groups.indexOf(groupName) < 0 )
+                data.groups.push( groupName );
+                
+            return udata.writeFile(userId, JSON.stringify(data));
+            
         }).then( function() {
             result( { result : true, text : "User added to the group"});  
         });
     });
+
 
 ```
 
@@ -1554,8 +1555,8 @@ return _promise(
                         return udata.writeFile(id, JSON.stringify( userData) );
                     })
                     .then( function() {
-                        result( { result : true} );
-                    })
+                        result( { result : true, userId : id} );
+                    });
             });
     });
 
