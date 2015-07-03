@@ -1375,25 +1375,21 @@
         };
 
         /**
-         * @param string userName
+         * @param string userId
          */
-        _myTrait_.getUserGroups = function (userName) {
-          var userHash = this.hash(userName);
+        _myTrait_.getUserGroups = function (userId) {
+
           var local = this._users,
               me = this;
-          var groupFile = userHash + '-groups';
+
+          // local and udata...
+          var local = me._users;
+          var udata = me._udata;
 
           return _promise(function (result) {
-
-            local.readFile(groupFile).then(function (lines) {
-
-              var list = lines.split('\n');
-              var res = [];
-              list.forEach(function (gid) {
-                if (gid && gid.length > 2) res.push(gid);
-              });
-              me._getGroupNames(res, [userHash]).then(result);
-              // result(res);
+            udata.readFile(userId).then(function (jsonData) {
+              var data = JSON.parse(jsonData);
+              result(data.groups);
             }).fail(function () {
               result([]);
             });
