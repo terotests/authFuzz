@@ -2,7 +2,27 @@
 
 Simple authentication filesystem and authentication emulator for testing purposes.
 
-The user account information is encoded with `SHA-3` algorithm.
+The user account information is encoded with `SHA-3` algorithm. 
+
+The filesystem hashes all the usernames and passwords with salt so that none of the information can be read directly from the serialized format.
+
+The structure of the filesystem is as follows
+
+1. **users** directory stores login information in file named `<usernamehash>` with value `<passwordhash>`
+2. **users** directory stores groups`usernamehash-groups` with value `<grouphash>`
+3. **groups** directory stores groups `groupnamehash` with value `<groupname>`
+
+Thus, only group names can be obtained in plain text format through this interface.
+
+```javascript
+{
+   "users":{"8a8202365df345876f77d7c4a5e192d484f1f68ad38d75c79d4737d2af93cf49":"9930f4bd8f81c27eb03a1ca9703e24c5f0ebee067c981942f516263d8191bb29",
+            "8a8202365df345876f77d7c4a5e192d484f1f68ad38d75c79d4737d2af93cf49-groups":"8a8202365df345876f77d7c4a5e192d484f1f68ad38d75c79d4737d2af93cf49\n",
+            "80dda3dcbcfea291d5c71fbd73d908118ccbb5d0b4155a00bbf03fdf471c8cb6":"e9cb79df963a6adb128648e29917d84eb2f30ff41f210277099ca256f41262cf",
+            "80dda3dcbcfea291d5c71fbd73d908118ccbb5d0b4155a00bbf03fdf471c8cb6-groups":"80dda3dcbcfea291d5c71fbd73d908118ccbb5d0b4155a00bbf03fdf471c8cb6"},
+  "groups":{"13fd8ac57db810ff8040a5bb7f51bc2525782b07d28ba33dbc3a1d6a3131f727":"common"}
+}
+```
 
 ## Initialization:
 
