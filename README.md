@@ -1479,10 +1479,7 @@ return reader;
 
 ```javascript
 
-var local = this._users, me = this;
-
-// local and udata...
-var local = me._users;
+var me = this;
 var udata = me._udata;
 
 return _promise(
@@ -1659,38 +1656,27 @@ return _promise(
 
 ```
 
-### <a name="authFuzz_removeUserGroup"></a>authFuzz::removeUserGroup(userName, groupName)
+### <a name="authFuzz_removeUserGroup"></a>authFuzz::removeUserGroup(userId, groupName)
 
 
 ```javascript
-var groupHash = this.hash( groupName );
-var userHash  = this.hash( userName );
-var local = this._users, me = this;
-var groupFile = userHash+"-groups";
+var me = this;
+var udata = me._udata;
 
 return _promise(
     function(result) {
-        local.readFile(groupFile).then( function(lines) {
+        udata.readFile(userId).then( function(jsonData) {
             
-            var list = lines.split("\n");
-            var res = [];
-
-            list.forEach( function(gid) {
-                if(!gid || gid.trim().length==0) return;
-                // user can not be removed from his/her own group
-                if(gid == groupHash && ( gid != userHash )) {
-                    
-                } else {
-                    res.push(gid);
-                }
-            });
-
-            // return local.writeFile(groupFile, "----newdata------");
-            // do not write this time...
-            return local.writeFile(groupFile, res.join("\n")+"\n");
-            // return true;
+            var data = JSON.parse( jsonData );
+            
+            var i = data.groups.indexOf(groupName);
+            if(data.groups.indexOf(groupName) >= 0 )
+                data.groups.splice(i,1);
+                
+            return udata.writeFile(userId, JSON.stringify(data));
+            
         }).then( function() {
-            result( { result : true, text : "group removed"});  
+            result( { result : true, text : "User added to the group"});  
         });
     });
 

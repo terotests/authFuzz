@@ -1289,11 +1289,7 @@
          */
         _myTrait_.addUserToGroup = function (userId, groupName) {
 
-          var local = this._users,
-              me = this;
-
-          // local and udata...
-          var local = me._users;
+          var me = this;
           var udata = me._udata;
 
           return _promise(function (result) {
@@ -1476,38 +1472,26 @@
         };
 
         /**
-         * @param float userName
+         * @param float userId
          * @param float groupName
          */
-        _myTrait_.removeUserGroup = function (userName, groupName) {
-          var groupHash = this.hash(groupName);
-          var userHash = this.hash(userName);
-          var local = this._users,
-              me = this;
-          var groupFile = userHash + '-groups';
+        _myTrait_.removeUserGroup = function (userId, groupName) {
+          var me = this;
+          var udata = me._udata;
 
           return _promise(function (result) {
-            local.readFile(groupFile).then(function (lines) {
+            udata.readFile(userId).then(function (jsonData) {
 
-              var list = lines.split('\n');
-              var res = [];
+              var data = JSON.parse(jsonData);
 
-              list.forEach(function (gid) {
-                if (!gid || gid.trim().length == 0) return;
-                // user can not be removed from his/her own group
-                if (gid == groupHash && gid != userHash) {} else {
-                  res.push(gid);
-                }
-              });
+              var i = data.groups.indexOf(groupName);
+              if (data.groups.indexOf(groupName) >= 0) data.groups.splice(i, 1);
 
-              // return local.writeFile(groupFile, "----newdata------");
-              // do not write this time...
-              return local.writeFile(groupFile, res.join('\n') + '\n');
-              // return true;
+              return udata.writeFile(userId, JSON.stringify(data));
             }).then(function () {
               result({
                 result: true,
-                text: 'group removed'
+                text: 'User added to the group'
               });
             });
           });
