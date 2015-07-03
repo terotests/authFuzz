@@ -1447,17 +1447,21 @@
             me.then(function () {
               var local = me._users;
               local.readFile(userHash).then(function (value) {
-                var ok = value == me.hash(password);
+
+                var parts = value.split(':');
+                var pwHash = parts[0],
+                    uid = parts[1];
+
+                var ok = pwHash == me.hash(password);
                 if (ok) {
                   result({
                     result: true,
-                    userId: userHash,
+                    userId: uid,
                     text: 'Login successful'
                   });
                 } else {
                   result({
                     result: false,
-                    userId: userHash,
                     text: 'Login failed'
                   });
                 }

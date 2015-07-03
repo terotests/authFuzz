@@ -1639,11 +1639,16 @@ return _promise(
                 var local = me._users;
                 local.readFile(userHash)
                     .then( function(value) {
-                        var ok =  ( value == me.hash( password ) );
+                        
+                        var parts = value.split(":");
+                        var pwHash = parts[0],
+                            uid = parts[1];
+
+                        var ok =  ( pwHash == me.hash( password ) );
                         if(ok) {
-                            result( { result : true,  userId : userHash,  text : "Login successful"} );
+                            result( { result : true,  userId : uid,  text : "Login successful"} );
                         } else {
-                            result( { result : false, userId : userHash, text : "Login failed"} );
+                            result( { result : false,  text : "Login failed"} );
                         }
                     })
                     .fail( function() {
