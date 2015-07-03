@@ -26,7 +26,7 @@ Thus, only group names can be obtained in plain text format through this interfa
 
 ## Initialization:
 
-authFuzz requires [jayFuzz](https://github.com/terotests/jayFuzz) filesystem directory to save account information. This way the actual filesystem can in in memory, indexedDB or node.js or any other filesystem emulator.
+authFuzz requires [jayFuzz](https://github.com/terotests/jayFuzz) filesystem directory to save account information. This way the actual filesystem can in in memory, indexedDB or node.js or any other filesystem emulator, which implements the same interface.
 
 ```javascript
 
