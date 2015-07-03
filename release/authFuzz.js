@@ -1217,6 +1217,7 @@
 
           list.forEach(function (id) {
 
+            console.log('group id ', id);
             if (ignoreGroups.indexOf(id) >= 0) {
               res.push({
                 id: id,
@@ -1234,7 +1235,7 @@
               });
               return res;
             }).fail(function (m) {
-              console.error('Error reading group index with ' + m);
+              console.error('Error reading group index with ' + m + ' FOR ' + id);
             });
           });
           reader = reader.then(function () {
@@ -1338,7 +1339,14 @@
           var groupFile = userHash + '-groups';
 
           return _promise(function (result) {
+            console.log('groupFile = ' + groupFile);
+            console.log('user name = ' + userName);
+
             local.readFile(groupFile).then(function (lines) {
+
+              console.log('Lines from the groupFile');
+              console.log(lines);
+
               var list = lines.split('\n');
               var res = [];
               list.forEach(function (gid) {
@@ -1440,7 +1448,10 @@
                 }
               });
 
-              return local.writeFile(groupFile, res.join('\n'));
+              // return local.writeFile(groupFile, "----newdata------");
+              // do not write this time...
+              return local.writeFile(groupFile, res.join('\n') + '\n');
+              // return true;
             }).then(function () {
               result({
                 result: true,
