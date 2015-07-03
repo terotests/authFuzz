@@ -227,6 +227,7 @@ auth.getUserGroups( "secondUser")
 #### Class authFuzz
 
 
+- [_getGroupNames](README.md#authFuzz__getGroupNames)
 - [addUserToGroup](README.md#authFuzz_addUserToGroup)
 - [createGroup](README.md#authFuzz_createGroup)
 - [createUser](README.md#authFuzz_createUser)
@@ -1381,6 +1382,46 @@ The class has following internal singleton variables:
 * s
         
         
+### <a name="authFuzz__getGroupNames"></a>authFuzz::_getGroupNames(list, ignoreGroups)
+
+Given list of group ID&#39;s returns the group names
+```javascript
+var orig = _promise(),
+    reader = orig,
+    res = [],
+    folder = this._groups;
+    
+list.forEach( function(id) {
+    
+   if(ignoreGroups.indexOf(id)>=0) {
+       res.push({
+           id : id,
+           name : id
+       });
+       return;
+   }
+    
+   reader = reader.then( function() {
+        return folder.readFile(id);    
+   }).then( function(groupName) {
+       res.push({
+           id : id,
+           name : groupName
+       });
+       return res;
+   }).fail( function(m) {
+       console.error("Error reading group index with "+m);
+   })
+});    
+reader = reader.then( function() {
+    return res;
+});
+orig.resolve(true);
+
+return reader;
+    
+```
+
 ### <a name="authFuzz_addUserToGroup"></a>authFuzz::addUserToGroup(userName, groupName)
 
 
@@ -1475,7 +1516,8 @@ return _promise(
             list.forEach( function(gid) {
                 if(gid && gid.length>2) res.push(gid);
             });
-            result(res);
+            me._getGroupNames( res, [userHash] ).then( result );
+            // result(res);
         }).fail( function() {
             result([]);
         });

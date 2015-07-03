@@ -1205,6 +1205,47 @@
         // Initialize static variables here...
 
         /**
+         * Given list of group ID&#39;s returns the group names
+         * @param float list
+         * @param float ignoreGroups
+         */
+        _myTrait_._getGroupNames = function (list, ignoreGroups) {
+          var orig = _promise(),
+              reader = orig,
+              res = [],
+              folder = this._groups;
+
+          list.forEach(function (id) {
+
+            if (ignoreGroups.indexOf(id) >= 0) {
+              res.push({
+                id: id,
+                name: id
+              });
+              return;
+            }
+
+            reader = reader.then(function () {
+              return folder.readFile(id);
+            }).then(function (groupName) {
+              res.push({
+                id: id,
+                name: groupName
+              });
+              return res;
+            }).fail(function (m) {
+              console.error('Error reading group index with ' + m);
+            });
+          });
+          reader = reader.then(function () {
+            return res;
+          });
+          orig.resolve(true);
+
+          return reader;
+        };
+
+        /**
          * @param string userName
          * @param float groupName
          */
@@ -1303,7 +1344,8 @@
               list.forEach(function (gid) {
                 if (gid && gid.length > 2) res.push(gid);
               });
-              result(res);
+              me._getGroupNames(res, [userHash]).then(result);
+              // result(res);
             }).fail(function () {
               result([]);
             });
