@@ -9,7 +9,7 @@ The filesystem hashes all the usernames and passwords with salt so that none of 
 The structure of the filesystem is as follows
 
 1. **users** directory stores login information in file named `<usernamehash>` with value `<passwordhash>`
-2. **users** directory stores groups`usernamehash-groups` with value `<grouphash>`
+2. **users** directory stores groups`usernamehash-groups` with value `<grouphash>` separated by newlines
 3. **groups** directory stores groups `groupnamehash` with value `<groupname>`
 
 Thus, only group names can be obtained in plain text format through this interface.
