@@ -1,4 +1,8 @@
-# authFuzz 
+# authFuzz - documentation out of date :)
+
+`Currently broksen - next version coming soon`
+
+......
 
 Simple authentication filesystem and authentication system for simple filesystem based interfaces and testing purposes.
 
@@ -273,9 +277,22 @@ auth.getUserGroups( "secondUser")
 
 
    
+    
+##### trait _dataTrait
+
+- [guid](README.md#_dataTrait_guid)
+- [isArray](README.md#_dataTrait_isArray)
+- [isFunction](README.md#_dataTrait_isFunction)
+- [isObject](README.md#_dataTrait_isObject)
+
+
+    
+    
 
 
    
+      
+    
 
 
 
@@ -1502,30 +1519,39 @@ return _promise(
 
 ```
 
-### <a name="authFuzz_createUser"></a>authFuzz::createUser(userName, password)
+### <a name="authFuzz_createUser"></a>authFuzz::createUser(userName, password, id, domain)
 
 
 ```javascript
-var userHash = this.hash( userName );
+
+// username is used to find the user based on the username...
+// userID should be
+
+domain = domain || "";
+if(!id) id = this.guid();
+
+var userHash = this.hash( userName+":"+domain );
 var me = this;
 var groupFile = userHash+"-groups";
+
+// store user information into object, which is serialized
+var userData = {
+    userName : userName,
+    domain   : domain,
+    hash     : userHash,
+    groups   : []
+};
 
 return _promise(
     function(result) {
         me.then(
             function() {
                 var local = me._users;
-                local.writeFile(userHash, me.hash(password))
+                var udata = me._udata;
+                
+                local.writeFile(userHash, me.hash(password)+":"+id+":"+domain)
                     .then( function() {
-                        return local.isFile(groupFile);
-                    })
-                    .then( function(is_file) {
-                        if(!is_file) {
-                            // user belongs to his own group by default
-                            return local.writeFile(groupFile, userHash+"\n");
-                        } else {
-                            return true;
-                        }
+                        return udata.writeFile(id, JSON.stringify( userData) );
                     })
                     .then( function() {
                         result( { result : true} );
@@ -1545,14 +1571,9 @@ var groupFile = userHash+"-groups";
 
 return _promise(
     function(result) {
-        console.log("groupFile = "+groupFile);
-        console.log("user name = "+userName);
-        
+
         local.readFile(groupFile).then( function(lines) {
-            
-            console.log("Lines from the groupFile");
-            console.log(lines);
-            
+
             var list = lines.split("\n");
             var res = [];
             list.forEach( function(gid) {
@@ -1590,20 +1611,29 @@ var me = this;
 this._fs.createDir("users").then( function() {
    return me._fs.createDir("groups");
 }).then( function() {
-    me._users  = fileSystem.getFolder("users");
-    me._groups = fileSystem.getFolder("groups");
+   return me._fs.createDir("domains");
+}).then( function() {
+   return me._fs.createDir("udata");
+}).then( function() {
+    me._users    = fileSystem.getFolder("users");
+    me._groups   = fileSystem.getFolder("groups");
+    me._domains  = fileSystem.getFolder("domains");
+    me._udata    = fileSystem.getFolder("udata");
     me.resolve(true);
 });
 
 
 ```
         
-### <a name="authFuzz_login"></a>authFuzz::login(user, password)
+### <a name="authFuzz_login"></a>authFuzz::login(user, password, domain)
 
 
 ```javascript
-var userHash = this.hash( user );
+
 var me = this;
+
+if(!domain) domain = "";
+var userHash = this.hash( user+":"+domain );
 
 return _promise(
     function(result) {
@@ -1614,9 +1644,9 @@ return _promise(
                     .then( function(value) {
                         var ok =  ( value == me.hash( password ) );
                         if(ok) {
-                            result( { result : true, text : "Login successful"} );
+                            result( { result : true,  userId : userHash,  text : "Login successful"} );
                         } else {
-                            result( { result : false, text : "Login failed"} );
+                            result( { result : false, userId : userHash, text : "Login failed"} );
                         }
                     })
                     .fail( function() {
@@ -1667,9 +1697,52 @@ return _promise(
 
 
    
+    
+## trait _dataTrait
+
+The class has following internal singleton variables:
+        
+        
+### <a name="_dataTrait_guid"></a>_dataTrait::guid(t)
+
+
+```javascript
+
+return Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15);
+
+```
+
+### <a name="_dataTrait_isArray"></a>_dataTrait::isArray(t)
+
+
+```javascript
+return Object.prototype.toString.call( t ) === '[object Array]';
+```
+
+### <a name="_dataTrait_isFunction"></a>_dataTrait::isFunction(fn)
+
+
+```javascript
+return Object.prototype.toString.call(fn) == '[object Function]';
+```
+
+### <a name="_dataTrait_isObject"></a>_dataTrait::isObject(t)
+
+
+```javascript
+
+return t === Object(t);
+```
+
+
+    
+    
 
 
    
+      
+    
 
 
 

@@ -1193,6 +1193,43 @@
     var authFuzz_prototype = function authFuzz_prototype() {
       // Then create the traits and subclasses for this class here...
 
+      // trait comes here...
+
+      (function (_myTrait_) {
+
+        // Initialize static variables here...
+
+        /**
+         * @param float t
+         */
+        _myTrait_.guid = function (t) {
+
+          return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        };
+
+        /**
+         * @param float t
+         */
+        _myTrait_.isArray = function (t) {
+          return Object.prototype.toString.call(t) === '[object Array]';
+        };
+
+        /**
+         * @param float fn
+         */
+        _myTrait_.isFunction = function (fn) {
+          return Object.prototype.toString.call(fn) == '[object Function]';
+        };
+
+        /**
+         * @param float t
+         */
+        _myTrait_.isObject = function (t) {
+
+          return t === Object(t);
+        };
+      })(this);
+
       (function (_myTrait_) {
         var HEX_CHARS;
         var KECCAK_PADDING;
@@ -1300,26 +1337,38 @@
         };
 
         /**
-         * @param float userName
-         * @param float password
+         * @param string userName
+         * @param string password
+         * @param string id
+         * @param string domain
          */
-        _myTrait_.createUser = function (userName, password) {
-          var userHash = this.hash(userName);
+        _myTrait_.createUser = function (userName, password, id, domain) {
+
+          // username is used to find the user based on the username...
+          // userID should be
+
+          domain = domain || '';
+          if (!id) id = this.guid();
+
+          var userHash = this.hash(userName + ':' + domain);
           var me = this;
           var groupFile = userHash + '-groups';
+
+          // store user information into object, which is serialized
+          var userData = {
+            userName: userName,
+            domain: domain,
+            hash: userHash,
+            groups: []
+          };
 
           return _promise(function (result) {
             me.then(function () {
               var local = me._users;
-              local.writeFile(userHash, me.hash(password)).then(function () {
-                return local.isFile(groupFile);
-              }).then(function (is_file) {
-                if (!is_file) {
-                  // user belongs to his own group by default
-                  return local.writeFile(groupFile, userHash + '\n');
-                } else {
-                  return true;
-                }
+              var udata = me._udata;
+
+              local.writeFile(userHash, me.hash(password) + ':' + id + ':' + domain).then(function () {
+                return udata.writeFile(id, JSON.stringify(userData));
               }).then(function () {
                 result({
                   result: true
@@ -1339,13 +1388,8 @@
           var groupFile = userHash + '-groups';
 
           return _promise(function (result) {
-            console.log('groupFile = ' + groupFile);
-            console.log('user name = ' + userName);
 
             local.readFile(groupFile).then(function (lines) {
-
-              console.log('Lines from the groupFile');
-              console.log(lines);
 
               var list = lines.split('\n');
               var res = [];
@@ -1383,8 +1427,14 @@
           this._fs.createDir('users').then(function () {
             return me._fs.createDir('groups');
           }).then(function () {
+            return me._fs.createDir('domains');
+          }).then(function () {
+            return me._fs.createDir('udata');
+          }).then(function () {
             me._users = fileSystem.getFolder('users');
             me._groups = fileSystem.getFolder('groups');
+            me._domains = fileSystem.getFolder('domains');
+            me._udata = fileSystem.getFolder('udata');
             me.resolve(true);
           });
         });
@@ -1392,10 +1442,14 @@
         /**
          * @param String user
          * @param String password
+         * @param float domain
          */
-        _myTrait_.login = function (user, password) {
-          var userHash = this.hash(user);
+        _myTrait_.login = function (user, password, domain) {
+
           var me = this;
+
+          if (!domain) domain = '';
+          var userHash = this.hash(user + ':' + domain);
 
           return _promise(function (result) {
             me.then(function () {
@@ -1405,11 +1459,13 @@
                 if (ok) {
                   result({
                     result: true,
+                    userId: userHash,
                     text: 'Login successful'
                   });
                 } else {
                   result({
                     result: false,
+                    userId: userHash,
                     text: 'Login failed'
                   });
                 }
