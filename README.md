@@ -105,6 +105,8 @@ auth.removeUserGroup("secondUser", "common")
 auth.getUserGroups( "secondUser")
     .then( function(list) {
         // list = array of group IDs
+        // array in format
+        // { id : <id>, name : <username>}
     });
 ```
    
