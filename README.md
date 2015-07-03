@@ -38,6 +38,18 @@ var root = filesystem.getRootFolder();
 var auth = authFuzz(root);
 
 ```
+
+## Salting
+
+When initializing the auth -system, optional hash "salt" can be given
+
+```javascript
+
+var auth = authFuzz(root, "mySecretKey2187987");
+
+```
+
+
 ## Creating users:
 
 ```javascript
