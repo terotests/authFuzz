@@ -1,6 +1,6 @@
 # authFuzz 
 
-Simple authentication filesystem and authentication emulator for testing purposes.
+Simple authentication filesystem and authentication emulator for simple filesystem based interfaces and testing purposes.
 
 The user account information is encoded with `SHA-3` algorithm. 
 
