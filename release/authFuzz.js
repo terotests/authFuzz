@@ -740,6 +740,43 @@
     var authFuzz_prototype = function authFuzz_prototype() {
       // Then create the traits and subclasses for this class here...
 
+      // trait comes here...
+
+      (function (_myTrait_) {
+
+        // Initialize static variables here...
+
+        /**
+         * @param float t
+         */
+        _myTrait_.guid = function (t) {
+
+          return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        };
+
+        /**
+         * @param float t
+         */
+        _myTrait_.isArray = function (t) {
+          return Object.prototype.toString.call(t) === '[object Array]';
+        };
+
+        /**
+         * @param float fn
+         */
+        _myTrait_.isFunction = function (fn) {
+          return Object.prototype.toString.call(fn) == '[object Function]';
+        };
+
+        /**
+         * @param float t
+         */
+        _myTrait_.isObject = function (t) {
+
+          return t === Object(t);
+        };
+      })(this);
+
       (function (_myTrait_) {
 
         // Initialize static variables here...
@@ -856,7 +893,6 @@
             me.then(function () {
               var local = me._users;
               var udata = me._udata;
-
               local.writeFile(userHash, me.hash(password) + ':' + id + ':' + domain).then(function () {
                 return udata.writeFile(id, JSON.stringify(userData));
               }).then(function () {
