@@ -737,6 +737,311 @@
     // the subclass definition comes around here then
 
     // The class definition is here...
+    var authFuzz_prototype = function authFuzz_prototype() {
+      // Then create the traits and subclasses for this class here...
+
+      (function (_myTrait_) {
+
+        // Initialize static variables here...
+
+        /**
+         * @param float list
+         * @param float ignoreGroups
+         */
+        _myTrait_._getGroupNames = function (list, ignoreGroups) {
+          var orig = _promise(),
+              reader = orig,
+              res = [],
+              folder = this._groups;
+
+          list.forEach(function (id) {
+
+            if (ignoreGroups.indexOf(id) >= 0) {
+              res.push({
+                id: id,
+                name: id
+              });
+              return;
+            }
+
+            reader = reader.then(function () {
+              return folder.readFile(id);
+            }).then(function (groupName) {
+              res.push({
+                id: id,
+                name: groupName
+              });
+              return res;
+            }).fail(function (m) {
+              console.error('Error reading group index with ' + m + ' FOR ' + id);
+            });
+          });
+          reader = reader.then(function () {
+            return res;
+          });
+          orig.resolve(true);
+
+          return reader;
+        };
+
+        /**
+         * @param string userId
+         * @param float groupName
+         */
+        _myTrait_.addUserToGroup = function (userId, groupName) {
+          var me = this;
+          var udata = me._udata;
+
+          return _promise(function (result) {
+            udata.readFile(userId).then(function (jsonData) {
+
+              var data = JSON.parse(jsonData);
+
+              if (data.groups.indexOf(groupName) < 0) data.groups.push(groupName);
+
+              return udata.writeFile(userId, JSON.stringify(data));
+            }).then(function () {
+              result({
+                result: true,
+                text: 'User added to the group'
+              });
+            });
+          });
+        };
+
+        /**
+         * @param string groupName
+         */
+        _myTrait_.createGroup = function (groupName) {
+          var groupHash = this.hash(groupName);
+          var local = this._groups,
+              me = this;
+
+          return _promise(function (result) {
+            local.writeFile(groupHash, groupName).then(function () {
+              result({
+                result: true,
+                text: 'group created'
+              });
+            });
+          });
+        };
+
+        /**
+         * @param float userName
+         * @param float password
+         * @param float id
+         * @param float domain
+         */
+        _myTrait_.createUser = function (userName, password, id, domain) {
+          // username is used to find the user based on the username...
+          // userID should be
+
+          domain = domain || '';
+          if (!id) id = this.guid();
+
+          var userHash = this.hash(userName + ':' + domain);
+          var me = this;
+          var groupFile = userHash + '-groups';
+
+          // store user information into object, which is serialized
+          var userData = {
+            userName: userName,
+            domain: domain,
+            hash: userHash,
+            groups: []
+          };
+
+          return _promise(function (result) {
+            me.then(function () {
+              var local = me._users;
+              var udata = me._udata;
+
+              local.writeFile(userHash, me.hash(password) + ':' + id + ':' + domain).then(function () {
+                return udata.writeFile(id, JSON.stringify(userData));
+              }).then(function () {
+                result({
+                  result: true,
+                  userId: id
+                });
+              });
+            });
+          });
+        };
+
+        /**
+         * @param float userId
+         */
+        _myTrait_.getUserGroups = function (userId) {
+          var local = this._users,
+              me = this;
+
+          // local and udata...
+          var local = me._users;
+          var udata = me._udata;
+
+          return _promise(function (result) {
+            udata.readFile(userId).then(function (jsonData) {
+              var data = JSON.parse(jsonData);
+              result(data.groups);
+            }).fail(function () {
+              result([]);
+            });
+          });
+        };
+
+        /**
+         * @param string value
+         */
+        _myTrait_.hash = function (value) {
+          return _sha3().sha3_256(value + this._salt);
+        };
+
+        if (_myTrait_.__traitInit && !_myTrait_.hasOwnProperty('__traitInit')) _myTrait_.__traitInit = _myTrait_.__traitInit.slice();
+        if (!_myTrait_.__traitInit) _myTrait_.__traitInit = [];
+        _myTrait_.__traitInit.push(function (fileSystem, hashSalt) {
+          if (!hashSalt) {
+            this._salt = '31337'; // just use some kind of salting if no provided
+          } else {
+            this._salt = hashSalt;
+          }
+
+          this._fs = fileSystem;
+          var me = this;
+
+          this._fs.createDir('users').then(function () {
+            return me._fs.createDir('groups');
+          }).then(function () {
+            return me._fs.createDir('domains');
+          }).then(function () {
+            return me._fs.createDir('udata');
+          }).then(function () {
+            me._users = fileSystem.getFolder('users');
+            me._groups = fileSystem.getFolder('groups');
+            me._domains = fileSystem.getFolder('domains');
+            me._udata = fileSystem.getFolder('udata');
+            me.resolve(true);
+          });
+        });
+
+        /**
+         * @param float user
+         * @param float password
+         * @param float domain
+         */
+        _myTrait_.login = function (user, password, domain) {
+          var me = this;
+
+          if (!domain) domain = '';
+          var userHash = this.hash(user + ':' + domain);
+
+          return _promise(function (result) {
+            me.then(function () {
+              var local = me._users;
+              local.readFile(userHash).then(function (value) {
+
+                var parts = value.split(':');
+                var pwHash = parts[0],
+                    uid = parts[1];
+
+                var ok = pwHash == me.hash(password);
+                if (ok) {
+                  result({
+                    result: true,
+                    userId: uid,
+                    text: 'Login successful'
+                  });
+                } else {
+                  result({
+                    result: false,
+                    text: 'Login failed'
+                  });
+                }
+              }).fail(function () {
+                result({
+                  result: false,
+                  text: 'Login failed'
+                });
+              });
+            });
+          });
+        };
+
+        /**
+         * @param float userId
+         * @param float groupName
+         */
+        _myTrait_.removeUserGroup = function (userId, groupName) {
+          var me = this;
+          var udata = me._udata;
+
+          return _promise(function (result) {
+            udata.readFile(userId).then(function (jsonData) {
+
+              var data = JSON.parse(jsonData);
+
+              var i = data.groups.indexOf(groupName);
+              if (data.groups.indexOf(groupName) >= 0) data.groups.splice(i, 1);
+
+              return udata.writeFile(userId, JSON.stringify(data));
+            }).then(function () {
+              result({
+                result: true,
+                text: 'User added to the group'
+              });
+            });
+          });
+        };
+      })(this);
+    };
+
+    var authFuzz = function authFuzz(a, b, c, d, e, f, g, h) {
+      var m = this,
+          res;
+      if (m instanceof authFuzz) {
+        var args = [a, b, c, d, e, f, g, h];
+        if (m.__factoryClass) {
+          m.__factoryClass.forEach(function (initF) {
+            res = initF.apply(m, args);
+          });
+          if (typeof res == 'function') {
+            if (res._classInfo.name != authFuzz._classInfo.name) return new res(a, b, c, d, e, f, g, h);
+          } else {
+            if (res) return res;
+          }
+        }
+        if (m.__traitInit) {
+          m.__traitInit.forEach(function (initF) {
+            initF.apply(m, args);
+          });
+        } else {
+          if (typeof m.init == 'function') m.init.apply(m, args);
+        }
+      } else return new authFuzz(a, b, c, d, e, f, g, h);
+    };
+    // inheritance is here _promise
+
+    authFuzz_prototype.prototype = _promise.prototype;
+
+    authFuzz._classInfo = {
+      name: 'authFuzz'
+    };
+    authFuzz.prototype = new authFuzz_prototype();
+
+    (function () {
+      if (typeof define !== 'undefined' && define !== null && define.amd != null) {
+        __amdDefs__['authFuzz'] = authFuzz;
+        this.authFuzz = authFuzz;
+      } else if (typeof module !== 'undefined' && module !== null && module.exports != null) {
+        module.exports['authFuzz'] = authFuzz;
+      } else {
+        this.authFuzz = authFuzz;
+      }
+    }).call(new Function('return this')());
+
+    // the subclass definition comes around here then
+
+    // The class definition is here...
     var _sha3_prototype = function _sha3_prototype() {
       // Then create the traits and subclasses for this class here...
 
@@ -755,7 +1060,6 @@
          * @param float t
          */
         _myTrait_._initSha = function (t) {
-
           if (RC) return;
 
           HEX_CHARS = '0123456789abcdef'.split('');
@@ -769,14 +1073,14 @@
 
         if (_myTrait_.__traitInit && !_myTrait_.hasOwnProperty('__traitInit')) _myTrait_.__traitInit = _myTrait_.__traitInit.slice();
         if (!_myTrait_.__traitInit) _myTrait_.__traitInit = [];
-        _myTrait_.__traitInit.push(function (options) {
+        _myTrait_.__traitInit.push(function (t) {
           this._initSha();
         });
 
         /**
-         * @param string message
-         * @param int bits
-         * @param int padding
+         * @param float message
+         * @param float bits
+         * @param float padding
          */
         _myTrait_.keccak = function (message, bits, padding) {
           var notString = typeof message != 'string';
@@ -1109,7 +1413,7 @@
         };
 
         /**
-         * @param String message
+         * @param string message
          */
         _myTrait_.keccak_256 = function (message) {
           return this.keccak(message, 256, KECCAK_PADDING);
@@ -1184,362 +1488,6 @@
         module.exports['_sha3'] = _sha3;
       } else {
         this._sha3 = _sha3;
-      }
-    }).call(new Function('return this')());
-
-    // the subclass definition comes around here then
-
-    // The class definition is here...
-    var authFuzz_prototype = function authFuzz_prototype() {
-      // Then create the traits and subclasses for this class here...
-
-      // trait comes here...
-
-      (function (_myTrait_) {
-
-        // Initialize static variables here...
-
-        /**
-         * @param float t
-         */
-        _myTrait_.guid = function (t) {
-
-          return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        };
-
-        /**
-         * @param float t
-         */
-        _myTrait_.isArray = function (t) {
-          return Object.prototype.toString.call(t) === '[object Array]';
-        };
-
-        /**
-         * @param float fn
-         */
-        _myTrait_.isFunction = function (fn) {
-          return Object.prototype.toString.call(fn) == '[object Function]';
-        };
-
-        /**
-         * @param float t
-         */
-        _myTrait_.isObject = function (t) {
-
-          return t === Object(t);
-        };
-      })(this);
-
-      (function (_myTrait_) {
-        var HEX_CHARS;
-        var KECCAK_PADDING;
-        var PADDING;
-        var SHIFT;
-        var RC;
-        var blocks;
-        var s;
-
-        // Initialize static variables here...
-
-        /**
-         * Given list of group ID&#39;s returns the group names
-         * @param float list
-         * @param float ignoreGroups
-         */
-        _myTrait_._getGroupNames = function (list, ignoreGroups) {
-          var orig = _promise(),
-              reader = orig,
-              res = [],
-              folder = this._groups;
-
-          list.forEach(function (id) {
-
-            console.log('group id ', id);
-            if (ignoreGroups.indexOf(id) >= 0) {
-              res.push({
-                id: id,
-                name: id
-              });
-              return;
-            }
-
-            reader = reader.then(function () {
-              return folder.readFile(id);
-            }).then(function (groupName) {
-              res.push({
-                id: id,
-                name: groupName
-              });
-              return res;
-            }).fail(function (m) {
-              console.error('Error reading group index with ' + m + ' FOR ' + id);
-            });
-          });
-          reader = reader.then(function () {
-            return res;
-          });
-          orig.resolve(true);
-
-          return reader;
-        };
-
-        /**
-         * @param string userId
-         * @param float groupName
-         */
-        _myTrait_.addUserToGroup = function (userId, groupName) {
-
-          var me = this;
-          var udata = me._udata;
-
-          return _promise(function (result) {
-            udata.readFile(userId).then(function (jsonData) {
-
-              var data = JSON.parse(jsonData);
-
-              if (data.groups.indexOf(groupName) < 0) data.groups.push(groupName);
-
-              return udata.writeFile(userId, JSON.stringify(data));
-            }).then(function () {
-              result({
-                result: true,
-                text: 'User added to the group'
-              });
-            });
-          });
-        };
-
-        /**
-         * @param string groupName
-         */
-        _myTrait_.createGroup = function (groupName) {
-          var groupHash = this.hash(groupName);
-          var local = this._groups,
-              me = this;
-
-          return _promise(function (result) {
-            local.writeFile(groupHash, groupName).then(function () {
-              result({
-                result: true,
-                text: 'group created'
-              });
-            });
-          });
-        };
-
-        /**
-         * @param string userName
-         * @param string password
-         * @param string id
-         * @param string domain
-         */
-        _myTrait_.createUser = function (userName, password, id, domain) {
-
-          // username is used to find the user based on the username...
-          // userID should be
-
-          domain = domain || '';
-          if (!id) id = this.guid();
-
-          var userHash = this.hash(userName + ':' + domain);
-          var me = this;
-          var groupFile = userHash + '-groups';
-
-          // store user information into object, which is serialized
-          var userData = {
-            userName: userName,
-            domain: domain,
-            hash: userHash,
-            groups: []
-          };
-
-          return _promise(function (result) {
-            me.then(function () {
-              var local = me._users;
-              var udata = me._udata;
-
-              local.writeFile(userHash, me.hash(password) + ':' + id + ':' + domain).then(function () {
-                return udata.writeFile(id, JSON.stringify(userData));
-              }).then(function () {
-                result({
-                  result: true,
-                  userId: id
-                });
-              });
-            });
-          });
-        };
-
-        /**
-         * @param string userId
-         */
-        _myTrait_.getUserGroups = function (userId) {
-
-          var local = this._users,
-              me = this;
-
-          // local and udata...
-          var local = me._users;
-          var udata = me._udata;
-
-          return _promise(function (result) {
-            udata.readFile(userId).then(function (jsonData) {
-              var data = JSON.parse(jsonData);
-              result(data.groups);
-            }).fail(function () {
-              result([]);
-            });
-          });
-        };
-
-        /**
-         * @param string value
-         */
-        _myTrait_.hash = function (value) {
-          return _sha3().sha3_256(value + this._salt);
-        };
-
-        if (_myTrait_.__traitInit && !_myTrait_.hasOwnProperty('__traitInit')) _myTrait_.__traitInit = _myTrait_.__traitInit.slice();
-        if (!_myTrait_.__traitInit) _myTrait_.__traitInit = [];
-        _myTrait_.__traitInit.push(function (fileSystem, hashSalt) {
-
-          if (!hashSalt) {
-            this._salt = '31337'; // just use some kind of salting if no provided
-          } else {
-            this._salt = hashSalt;
-          }
-
-          this._fs = fileSystem;
-          var me = this;
-
-          this._fs.createDir('users').then(function () {
-            return me._fs.createDir('groups');
-          }).then(function () {
-            return me._fs.createDir('domains');
-          }).then(function () {
-            return me._fs.createDir('udata');
-          }).then(function () {
-            me._users = fileSystem.getFolder('users');
-            me._groups = fileSystem.getFolder('groups');
-            me._domains = fileSystem.getFolder('domains');
-            me._udata = fileSystem.getFolder('udata');
-            me.resolve(true);
-          });
-        });
-
-        /**
-         * @param String user
-         * @param String password
-         * @param float domain
-         */
-        _myTrait_.login = function (user, password, domain) {
-
-          var me = this;
-
-          if (!domain) domain = '';
-          var userHash = this.hash(user + ':' + domain);
-
-          return _promise(function (result) {
-            me.then(function () {
-              var local = me._users;
-              local.readFile(userHash).then(function (value) {
-
-                var parts = value.split(':');
-                var pwHash = parts[0],
-                    uid = parts[1];
-
-                var ok = pwHash == me.hash(password);
-                if (ok) {
-                  result({
-                    result: true,
-                    userId: uid,
-                    text: 'Login successful'
-                  });
-                } else {
-                  result({
-                    result: false,
-                    text: 'Login failed'
-                  });
-                }
-              }).fail(function () {
-                result({
-                  result: false,
-                  text: 'Login failed'
-                });
-              });
-            });
-          });
-        };
-
-        /**
-         * @param float userId
-         * @param float groupName
-         */
-        _myTrait_.removeUserGroup = function (userId, groupName) {
-          var me = this;
-          var udata = me._udata;
-
-          return _promise(function (result) {
-            udata.readFile(userId).then(function (jsonData) {
-
-              var data = JSON.parse(jsonData);
-
-              var i = data.groups.indexOf(groupName);
-              if (data.groups.indexOf(groupName) >= 0) data.groups.splice(i, 1);
-
-              return udata.writeFile(userId, JSON.stringify(data));
-            }).then(function () {
-              result({
-                result: true,
-                text: 'User added to the group'
-              });
-            });
-          });
-        };
-      })(this);
-    };
-
-    var authFuzz = function authFuzz(a, b, c, d, e, f, g, h) {
-      var m = this,
-          res;
-      if (m instanceof authFuzz) {
-        var args = [a, b, c, d, e, f, g, h];
-        if (m.__factoryClass) {
-          m.__factoryClass.forEach(function (initF) {
-            res = initF.apply(m, args);
-          });
-          if (typeof res == 'function') {
-            if (res._classInfo.name != authFuzz._classInfo.name) return new res(a, b, c, d, e, f, g, h);
-          } else {
-            if (res) return res;
-          }
-        }
-        if (m.__traitInit) {
-          m.__traitInit.forEach(function (initF) {
-            initF.apply(m, args);
-          });
-        } else {
-          if (typeof m.init == 'function') m.init.apply(m, args);
-        }
-      } else return new authFuzz(a, b, c, d, e, f, g, h);
-    };
-    // inheritance is here _promise
-
-    authFuzz_prototype.prototype = _promise.prototype;
-
-    authFuzz._classInfo = {
-      name: 'authFuzz'
-    };
-    authFuzz.prototype = new authFuzz_prototype();
-
-    (function () {
-      if (typeof define !== 'undefined' && define !== null && define.amd != null) {
-        __amdDefs__['authFuzz'] = authFuzz;
-        this.authFuzz = authFuzz;
-      } else if (typeof module !== 'undefined' && module !== null && module.exports != null) {
-        module.exports['authFuzz'] = authFuzz;
-      } else {
-        this.authFuzz = authFuzz;
       }
     }).call(new Function('return this')());
 
