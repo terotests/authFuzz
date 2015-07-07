@@ -1387,6 +1387,7 @@ return _promise(
                     })
                     .then( function(userData) {
                         if(bOk) {
+                            userData = JSON.parse(userData);
                             result( { result : true,  userId : user_id, groups:userData.groups, text : "Login successful"} );
                         } else {
                             result( { result : false,  text : "Login failed"} );

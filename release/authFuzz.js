@@ -1083,6 +1083,7 @@
                 } else {}
               }).then(function (userData) {
                 if (bOk) {
+                  userData = JSON.parse(userData);
                   result({
                     result: true,
                     userId: user_id,
