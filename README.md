@@ -24,7 +24,6 @@ The structure of the filesystem is as follows
 1. **users** directory stores login information in file hash `<username>:<domain>` with value hashed from `<password>:<userid>:<domain>`
 2. **udata** directory stores groups`<userId>` with users data like groups, domain etc.
 
-
 ```javascript
 {
    "users":{"< hash of username+domain>":"<password hash>:userid:domain",
@@ -33,6 +32,17 @@ The structure of the filesystem is as follows
    "udata":{"userid": { ... user data .... },
             "userid2": { ... user data .... },}
 }
+```
+
+
+The userData has following format:
+```javascript
+var userData = {
+    userName : userName,    // the login username
+    domain   : domain,      // domain of the user
+    hash     : userHash,    // the username+domain hash 
+    groups   : ["admins"]   // list of groups for the user
+};
 ```
 
 ## Initialization:
