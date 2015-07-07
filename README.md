@@ -130,6 +130,17 @@ auth.getUserData( "userID")
         
     });
 ```
+
+The userdata has following format:
+
+```javascript
+var userData = {
+    userName : userName,    // the login username
+    domain   : domain,      // domain of the user
+    hash     : userHash,    // the username+domain hash 
+    groups   : []           // list of groups for the user
+};
+```
    
    
 
