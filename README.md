@@ -237,38 +237,16 @@ auth.getUserGroups( "secondUser")
     
       
             
-#### Class _sha3
-
-
-- [_initSha](README.md#_sha3__initSha)
-- [keccak](README.md#_sha3_keccak)
-- [keccak_224](README.md#_sha3_keccak_224)
-- [keccak_256](README.md#_sha3_keccak_256)
-- [keccak_512](README.md#_sha3_keccak_512)
-- [sha3_224](README.md#_sha3_sha3_224)
-- [sha3_256](README.md#_sha3_sha3_256)
-- [sha3_512](README.md#_sha3_sha3_512)
-
-
-
-   
-
-
-   
-
-
-
-      
-    
-      
-            
 #### Class authFuzz
 
 
 - [_getGroupNames](README.md#authFuzz__getGroupNames)
 - [addUserToGroup](README.md#authFuzz_addUserToGroup)
+- [changePassword](README.md#authFuzz_changePassword)
+- [changeUsername](README.md#authFuzz_changeUsername)
 - [createGroup](README.md#authFuzz_createGroup)
 - [createUser](README.md#authFuzz_createUser)
+- [getUserData](README.md#authFuzz_getUserData)
 - [getUserGroups](README.md#authFuzz_getUserGroups)
 - [hash](README.md#authFuzz_hash)
 - [login](README.md#authFuzz_login)
@@ -293,6 +271,31 @@ auth.getUserGroups( "secondUser")
    
       
     
+
+
+
+      
+    
+      
+            
+#### Class _sha3
+
+
+- [_initSha](README.md#_sha3__initSha)
+- [keccak](README.md#_sha3_keccak)
+- [keccak_224](README.md#_sha3_keccak_224)
+- [keccak_256](README.md#_sha3_keccak_256)
+- [keccak_512](README.md#_sha3_keccak_512)
+- [sha3_224](README.md#_sha3_sha3_224)
+- [sha3_256](README.md#_sha3_sha3_256)
+- [sha3_512](README.md#_sha3_sha3_512)
+
+
+
+   
+
+
+   
 
 
 
@@ -1048,6 +1051,398 @@ return obj === Object(obj);
     
       
             
+# Class authFuzz
+
+
+The class has following internal singleton variables:
+        
+        
+### <a name="authFuzz__getGroupNames"></a>authFuzz::_getGroupNames(list, ignoreGroups)
+
+
+```javascript
+var orig = _promise(),
+    reader = orig,
+    res = [],
+    folder = this._groups;
+
+list.forEach( function(id) {
+
+   if(ignoreGroups.indexOf(id)>=0) {
+       res.push({
+           id : id,
+           name : id
+       });
+       return;
+   }
+
+   reader = reader.then( function() {
+        return folder.readFile(id);    
+   }).then( function(groupName) {
+       res.push({
+           id : id,
+           name : groupName
+       });
+       return res;
+   }).fail( function(m) {
+       console.error("Error reading group index with "+m+" FOR "+id);
+   })
+});    
+reader = reader.then( function() {
+    return res;
+});
+orig.resolve(true);
+
+return reader;
+```
+
+### <a name="authFuzz_addUserToGroup"></a>authFuzz::addUserToGroup(userId, groupName)
+
+
+```javascript
+var me = this;
+var udata = me._udata;
+
+return _promise(
+    function(result) {
+        udata.readFile(userId).then( function(jsonData) {
+
+            var data = JSON.parse( jsonData );
+
+            if(data.groups.indexOf(groupName) < 0 )
+                data.groups.push( groupName );
+
+            return udata.writeFile(userId, JSON.stringify(data));
+
+        }).then( function() {
+            result( { result : true, text : "User added to the group"});  
+        });
+    });
+```
+
+### <a name="authFuzz_changePassword"></a>authFuzz::changePassword(userId, newPassword)
+
+
+```javascript
+var local = this._users, me = this;
+var udata = me._udata;
+
+return _promise(
+    function(result) {
+        udata.readFile(userId).then( function(jsonData) {
+            var data = JSON.parse( jsonData );
+            // me.hash(password)+":"+id+":"+domain
+            return local.writeFile( data.hash, me.hash(newPassword)+":"+userId+":"+data.domain );
+        }).then( function() {
+            result({result : true, text:"Password changed"});
+        }).fail( function() {
+            result( [] );  
+        });
+    });
+```
+
+### <a name="authFuzz_changeUsername"></a>authFuzz::changeUsername(userId, newUsername, newDomain)
+
+
+```javascript
+var local = this._users, me = this;
+var udata = me._udata;
+
+return _promise(
+    function(result) {
+        var hashData, data, newHash, domain;
+        udata.readFile(userId).then( function(jsonData) {
+            data = JSON.parse( jsonData );
+            // me.hash(password)+":"+id+":"+domain
+            domain = newDomain || data.domain;
+            return local.readFile( data.hash );
+        }).then( function(oldData) {
+            hashData = oldData;
+            if(hashData) {
+                return local.removeFile( data.hash );
+            }
+        }).then( function() {
+            if(hashData) {
+                newHash = me.hash( newUsername+":"+domain );
+                return local.writeFile( newHash, hashData );
+            }
+        }).then( function() {
+            if(hashData) {
+                data.hash = newHash;
+                data.userName = newUsername;
+                data.domain = domain;
+                return udata.writeFile(userId,JSON.stringify( data) );
+            } 
+        }).then( function() {
+            if(hashData) {
+                result({result:true, text: "Username changed"});
+            } else {
+                result({result:false, text: "Could not change the username"});
+            }
+        }).fail( function() {
+            result( {result:false, text: "Could not change the username"} );  
+        });
+    });
+```
+
+### <a name="authFuzz_createGroup"></a>authFuzz::createGroup(groupName)
+
+
+```javascript
+var groupHash = this.hash( groupName );
+var local = this._groups, me = this;
+
+return _promise(
+    function(result) {
+        local.writeFile(groupHash, groupName).then( function() {
+            result( { result : true, text : "group created"});  
+        })
+    });
+```
+
+### <a name="authFuzz_createUser"></a>authFuzz::createUser(userName, password, id, domain)
+
+
+```javascript
+// username is used to find the user based on the username...
+// userID should be
+
+domain = domain || "";
+if(!id) id = this.guid();
+
+var userHash = this.hash( userName+":"+domain );
+var me = this;
+
+// store user information into object, which is serialized
+var userData = {
+    userName : userName,
+    domain   : domain,
+    hash     : userHash,
+    groups   : []
+};
+
+return _promise(
+    function(result) {
+        me.then(
+            function() {
+                var local = me._users;
+                var udata = me._udata;
+                
+                local.isFile(userHash).then( function(is_file) {
+                    if(!is_file) {
+                        local.writeFile(userHash, me.hash(password)+":"+id+":"+domain)
+                            .then( function() {
+                                return udata.writeFile(id, JSON.stringify( userData) );
+                            })
+                            .then( function() {
+                                result( { result : true, userId : id} );
+                            });       
+                    } else {
+                        local.readFile(userHash).then(
+                            function(data) {
+                                var parts = data.split(":");
+                                result( { result : true, userId : parts[1]} );
+                            });
+                        
+                    }
+                })
+                
+
+            });
+    });
+```
+
+### <a name="authFuzz_getUserData"></a>authFuzz::getUserData(userId)
+
+
+```javascript
+var me = this;
+var udata = me._udata;
+
+return _promise(
+    function(result) {
+        udata.readFile(userId).then( function(jsonData) {
+            var data = JSON.parse( jsonData );
+            result(data);
+        }).fail( function() {
+            result( null );  
+        });
+    });
+```
+
+### <a name="authFuzz_getUserGroups"></a>authFuzz::getUserGroups(userId)
+
+
+```javascript
+var local = this._users, me = this;
+
+// local and udata...
+var local = me._users;
+var udata = me._udata;
+
+return _promise(
+    function(result) {
+        udata.readFile(userId).then( function(jsonData) {
+            var data = JSON.parse( jsonData );
+            result(data.groups);
+        }).fail( function() {
+            result( [] );  
+        });
+    });
+```
+
+### <a name="authFuzz_hash"></a>authFuzz::hash(value)
+
+
+```javascript
+return _sha3().sha3_256( value + this._salt );
+```
+
+### authFuzz::constructor( fileSystem, hashSalt )
+
+```javascript
+if(!hashSalt) {
+    this._salt = "31337"; // just use some kind of salting if no provided
+} else {
+    this._salt = hashSalt;
+}
+
+this._fs = fileSystem;
+var me = this;
+
+this._fs.createDir("users").then( function() {
+   return me._fs.createDir("groups");
+}).then( function() {
+   return me._fs.createDir("domains");
+}).then( function() {
+   return me._fs.createDir("udata");
+}).then( function() {
+    me._users    = fileSystem.getFolder("users");
+    me._groups   = fileSystem.getFolder("groups");
+    me._domains  = fileSystem.getFolder("domains");
+    me._udata    = fileSystem.getFolder("udata");
+    me.resolve(true);
+});
+
+```
+        
+### <a name="authFuzz_login"></a>authFuzz::login(user, password, domain)
+
+
+```javascript
+var me = this;
+
+if(!domain) domain = "";
+var userHash = this.hash( user+":"+domain );
+
+return _promise(
+    function(result) {
+        me.then(
+            function() {
+                var local = me._users;
+                local.readFile(userHash)
+                    .then( function(value) {
+
+                        var parts = value.split(":");
+                        var pwHash = parts[0],
+                            uid = parts[1];
+
+                        var ok =  ( pwHash == me.hash( password ) );
+                        if(ok) {
+                            result( { result : true,  userId : uid,  text : "Login successful"} );
+                        } else {
+                            result( { result : false,  text : "Login failed"} );
+                        }
+                    })
+                    .fail( function() {
+                        result( { result : false, text : "Login failed"} );
+                    })
+            });
+    });
+```
+
+### <a name="authFuzz_removeUserGroup"></a>authFuzz::removeUserGroup(userId, groupName)
+
+
+```javascript
+var me = this;
+var udata = me._udata;
+
+return _promise(
+    function(result) {
+        // The user ID... file??
+        udata.readFile(userId).then( function(jsonData) {
+
+            var data = JSON.parse( jsonData );
+
+            var i = data.groups.indexOf(groupName);
+            if(data.groups.indexOf(groupName) >= 0 )
+                data.groups.splice(i,1);
+
+            return udata.writeFile(userId, JSON.stringify(data));
+
+        }).then( function() {
+            result( { result : true, text : "Removed user from group"});  
+        });
+    });
+```
+
+
+
+   
+    
+## trait _dataTrait
+
+The class has following internal singleton variables:
+        
+        
+### <a name="_dataTrait_guid"></a>_dataTrait::guid(t)
+
+
+```javascript
+
+return Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15);
+
+```
+
+### <a name="_dataTrait_isArray"></a>_dataTrait::isArray(t)
+
+
+```javascript
+return Object.prototype.toString.call( t ) === '[object Array]';
+```
+
+### <a name="_dataTrait_isFunction"></a>_dataTrait::isFunction(fn)
+
+
+```javascript
+return Object.prototype.toString.call(fn) == '[object Function]';
+```
+
+### <a name="_dataTrait_isObject"></a>_dataTrait::isObject(t)
+
+
+```javascript
+
+return t === Object(t);
+```
+
+
+    
+    
+
+
+   
+      
+    
+
+
+
+      
+    
+      
+            
 # Class _sha3
 
 
@@ -1072,7 +1467,6 @@ The class has following internal singleton variables:
 
 
 ```javascript
-
 if(RC) return;
 
 HEX_CHARS = '0123456789abcdef'.split('');
@@ -1088,7 +1482,7 @@ RC = [1, 0, 32898, 0, 32906, 2147483648, 2147516416, 2147483648, 32907, 0, 21474
 blocks = [], s = [];
 ```
 
-### _sha3::constructor( options )
+### _sha3::constructor( t )
 
 ```javascript
 this._initSha();
@@ -1406,331 +1800,6 @@ return this.keccak(message, 512, PADDING);
 
 
    
-
-
-
-      
-    
-      
-            
-# Class authFuzz
-
-
-The class has following internal singleton variables:
-        
-* HEX_CHARS
-        
-* KECCAK_PADDING
-        
-* PADDING
-        
-* SHIFT
-        
-* RC
-        
-* blocks
-        
-* s
-        
-        
-### <a name="authFuzz__getGroupNames"></a>authFuzz::_getGroupNames(list, ignoreGroups)
-
-Given list of group ID&#39;s returns the group names
-```javascript
-var orig = _promise(),
-    reader = orig,
-    res = [],
-    folder = this._groups;
-    
-list.forEach( function(id) {
-    
-   console.log("group id ", id);
-   if(ignoreGroups.indexOf(id)>=0) {
-       res.push({
-           id : id,
-           name : id
-       });
-       return;
-   }
-    
-   reader = reader.then( function() {
-        return folder.readFile(id);    
-   }).then( function(groupName) {
-       res.push({
-           id : id,
-           name : groupName
-       });
-       return res;
-   }).fail( function(m) {
-       console.error("Error reading group index with "+m+" FOR "+id);
-   })
-});    
-reader = reader.then( function() {
-    return res;
-});
-orig.resolve(true);
-
-return reader;
-    
-```
-
-### <a name="authFuzz_addUserToGroup"></a>authFuzz::addUserToGroup(userId, groupName)
-
-
-```javascript
-
-var me = this;
-var udata = me._udata;
-
-return _promise(
-    function(result) {
-        udata.readFile(userId).then( function(jsonData) {
-            
-            var data = JSON.parse( jsonData );
-            
-            if(data.groups.indexOf(groupName) < 0 )
-                data.groups.push( groupName );
-                
-            return udata.writeFile(userId, JSON.stringify(data));
-            
-        }).then( function() {
-            result( { result : true, text : "User added to the group"});  
-        });
-    });
-
-
-```
-
-### <a name="authFuzz_createGroup"></a>authFuzz::createGroup(groupName)
-
-
-```javascript
-var groupHash = this.hash( groupName );
-var local = this._groups, me = this;
-
-return _promise(
-    function(result) {
-        local.writeFile(groupHash, groupName).then( function() {
-            result( { result : true, text : "group created"});  
-        })
-    });
-
-```
-
-### <a name="authFuzz_createUser"></a>authFuzz::createUser(userName, password, id, domain)
-
-
-```javascript
-
-// username is used to find the user based on the username...
-// userID should be
-
-domain = domain || "";
-if(!id) id = this.guid();
-
-var userHash = this.hash( userName+":"+domain );
-var me = this;
-var groupFile = userHash+"-groups";
-
-// store user information into object, which is serialized
-var userData = {
-    userName : userName,
-    domain   : domain,
-    hash     : userHash,
-    groups   : []
-};
-
-return _promise(
-    function(result) {
-        me.then(
-            function() {
-                var local = me._users;
-                var udata = me._udata;
-                
-                local.writeFile(userHash, me.hash(password)+":"+id+":"+domain)
-                    .then( function() {
-                        return udata.writeFile(id, JSON.stringify( userData) );
-                    })
-                    .then( function() {
-                        result( { result : true, userId : id} );
-                    });
-            });
-    });
-
-```
-
-### <a name="authFuzz_getUserGroups"></a>authFuzz::getUserGroups(userId)
-
-
-```javascript
-
-var local = this._users, me = this;
-
-// local and udata...
-var local = me._users;
-var udata = me._udata;
-
-return _promise(
-    function(result) {
-        udata.readFile(userId).then( function(jsonData) {
-            var data = JSON.parse( jsonData );
-            result(data.groups);
-        }).fail( function() {
-            result( [] );  
-        });
-    });
-
-```
-
-### <a name="authFuzz_hash"></a>authFuzz::hash(value)
-
-
-```javascript
-return _sha3().sha3_256( value + this._salt );
-```
-
-### authFuzz::constructor( fileSystem, hashSalt )
-
-```javascript
-
-if(!hashSalt) {
-    this._salt = "31337"; // just use some kind of salting if no provided
-} else {
-    this._salt = hashSalt;
-}
-
-this._fs = fileSystem;
-var me = this;
-
-this._fs.createDir("users").then( function() {
-   return me._fs.createDir("groups");
-}).then( function() {
-   return me._fs.createDir("domains");
-}).then( function() {
-   return me._fs.createDir("udata");
-}).then( function() {
-    me._users    = fileSystem.getFolder("users");
-    me._groups   = fileSystem.getFolder("groups");
-    me._domains  = fileSystem.getFolder("domains");
-    me._udata    = fileSystem.getFolder("udata");
-    me.resolve(true);
-});
-
-
-```
-        
-### <a name="authFuzz_login"></a>authFuzz::login(user, password, domain)
-
-
-```javascript
-
-var me = this;
-
-if(!domain) domain = "";
-var userHash = this.hash( user+":"+domain );
-
-return _promise(
-    function(result) {
-        me.then(
-            function() {
-                var local = me._users;
-                local.readFile(userHash)
-                    .then( function(value) {
-                        
-                        var parts = value.split(":");
-                        var pwHash = parts[0],
-                            uid = parts[1];
-
-                        var ok =  ( pwHash == me.hash( password ) );
-                        if(ok) {
-                            result( { result : true,  userId : uid,  text : "Login successful"} );
-                        } else {
-                            result( { result : false,  text : "Login failed"} );
-                        }
-                    })
-                    .fail( function() {
-                        result( { result : false, text : "Login failed"} );
-                    })
-            });
-    });
-
-```
-
-### <a name="authFuzz_removeUserGroup"></a>authFuzz::removeUserGroup(userId, groupName)
-
-
-```javascript
-var me = this;
-var udata = me._udata;
-
-return _promise(
-    function(result) {
-        udata.readFile(userId).then( function(jsonData) {
-            
-            var data = JSON.parse( jsonData );
-            
-            var i = data.groups.indexOf(groupName);
-            if(data.groups.indexOf(groupName) >= 0 )
-                data.groups.splice(i,1);
-                
-            return udata.writeFile(userId, JSON.stringify(data));
-            
-        }).then( function() {
-            result( { result : true, text : "User added to the group"});  
-        });
-    });
-
-```
-
-
-
-   
-    
-## trait _dataTrait
-
-The class has following internal singleton variables:
-        
-        
-### <a name="_dataTrait_guid"></a>_dataTrait::guid(t)
-
-
-```javascript
-
-return Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15);
-
-```
-
-### <a name="_dataTrait_isArray"></a>_dataTrait::isArray(t)
-
-
-```javascript
-return Object.prototype.toString.call( t ) === '[object Array]';
-```
-
-### <a name="_dataTrait_isFunction"></a>_dataTrait::isFunction(fn)
-
-
-```javascript
-return Object.prototype.toString.call(fn) == '[object Function]';
-```
-
-### <a name="_dataTrait_isObject"></a>_dataTrait::isObject(t)
-
-
-```javascript
-
-return t === Object(t);
-```
-
-
-    
-    
-
-
-   
-      
-    
 
 
 

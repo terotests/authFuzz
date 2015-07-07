@@ -847,6 +847,86 @@
         };
 
         /**
+         * @param string userId
+         * @param string newPassword
+         */
+        _myTrait_.changePassword = function (userId, newPassword) {
+          var local = this._users,
+              me = this;
+          var udata = me._udata;
+
+          return _promise(function (result) {
+            udata.readFile(userId).then(function (jsonData) {
+              var data = JSON.parse(jsonData);
+              // me.hash(password)+":"+id+":"+domain
+              return local.writeFile(data.hash, me.hash(newPassword) + ':' + userId + ':' + data.domain);
+            }).then(function () {
+              result({
+                result: true,
+                text: 'Password changed'
+              });
+            }).fail(function () {
+              result([]);
+            });
+          });
+        };
+
+        /**
+         * @param string userId
+         * @param float newUsername
+         * @param float newDomain
+         */
+        _myTrait_.changeUsername = function (userId, newUsername, newDomain) {
+          var local = this._users,
+              me = this;
+          var udata = me._udata;
+
+          return _promise(function (result) {
+            var hashData, data, newHash, domain;
+            udata.readFile(userId).then(function (jsonData) {
+              data = JSON.parse(jsonData);
+              // me.hash(password)+":"+id+":"+domain
+              domain = newDomain || data.domain;
+              return local.readFile(data.hash);
+            }).then(function (oldData) {
+              hashData = oldData;
+              if (hashData) {
+                return local.removeFile(data.hash);
+              }
+            }).then(function () {
+              if (hashData) {
+                newHash = me.hash(newUsername + ':' + domain);
+                return local.writeFile(newHash, hashData);
+              }
+            }).then(function () {
+              if (hashData) {
+                data.hash = newHash;
+                data.userName = newUsername;
+                data.domain = domain;
+                return udata.writeFile(userId, JSON.stringify(data));
+              }
+            }).then(function () {
+              if (hashData) {
+                result({
+                  result: true,
+                  text: 'Username changed'
+                });
+              } else {
+                result({
+                  result: false,
+                  text: 'Could not change the username'
+                });
+              }
+            }).fail(function () {
+              result({
+                result: false,
+                text: 'Could not change the username'
+              });
+            });
+          });
+        };
+
+        /**
          * @param string groupName
          */
         _myTrait_.createGroup = function (groupName) {
@@ -879,7 +959,6 @@
 
           var userHash = this.hash(userName + ':' + domain);
           var me = this;
-          var groupFile = userHash + '-groups';
 
           // store user information into object, which is serialized
           var userData = {
@@ -893,14 +972,44 @@
             me.then(function () {
               var local = me._users;
               var udata = me._udata;
-              local.writeFile(userHash, me.hash(password) + ':' + id + ':' + domain).then(function () {
-                return udata.writeFile(id, JSON.stringify(userData));
-              }).then(function () {
-                result({
-                  result: true,
-                  userId: id
-                });
+
+              local.isFile(userHash).then(function (is_file) {
+                if (!is_file) {
+                  local.writeFile(userHash, me.hash(password) + ':' + id + ':' + domain).then(function () {
+                    return udata.writeFile(id, JSON.stringify(userData));
+                  }).then(function () {
+                    result({
+                      result: true,
+                      userId: id
+                    });
+                  });
+                } else {
+                  local.readFile(userHash).then(function (data) {
+                    var parts = data.split(':');
+                    result({
+                      result: true,
+                      userId: parts[1]
+                    });
+                  });
+                }
               });
+            });
+          });
+        };
+
+        /**
+         * @param string userId
+         */
+        _myTrait_.getUserData = function (userId) {
+          var me = this;
+          var udata = me._udata;
+
+          return _promise(function (result) {
+            udata.readFile(userId).then(function (jsonData) {
+              var data = JSON.parse(jsonData);
+              result(data);
+            }).fail(function () {
+              result(null);
             });
           });
         };
@@ -1004,14 +1113,15 @@
         };
 
         /**
-         * @param float userId
-         * @param float groupName
+         * @param string userId
+         * @param string groupName
          */
         _myTrait_.removeUserGroup = function (userId, groupName) {
           var me = this;
           var udata = me._udata;
 
           return _promise(function (result) {
+            // The user ID... file??
             udata.readFile(userId).then(function (jsonData) {
 
               var data = JSON.parse(jsonData);
@@ -1023,7 +1133,7 @@
             }).then(function () {
               result({
                 result: true,
-                text: 'User added to the group'
+                text: 'Removed user from group'
               });
             });
           });
