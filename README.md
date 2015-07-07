@@ -27,7 +27,7 @@ The structure of the filesystem is as follows
 ```javascript
 {
    "users":{"< hash of username+domain>":"<password hash>:userid:domain",
-            "< hash of username2+domain>":"<password hash for user 2>:userid2:domain",
+            "< hash of username2+domain>":"<password hash>:userid2:domain",
              ...},
    "udata":{"userid": { ... user data .... },
             "userid2": { ... user data .... },}
