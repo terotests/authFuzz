@@ -8,23 +8,30 @@ Simple authentication filesystem and authentication system for simple filesystem
 
 The user account information is encoded with `SHA-3` [algorithm](https://github.com/terotests/_sha3). 
 
-The filesystem hashes all the usernames and passwords with salt so that none of the information can be read directly from the serialized format.
+The filesystem hashes all passwords with salt so that none of the information can be read directly from the serialized format.
+
+Each user has
+
+1. *username* which is the login username
+2. *password* which is the login password
+3. *domain* which is optional domain for the logging
+4. *userId* which is unique ID used for identifying the user
+5. *userData* which is system data storing groups
+6. *groups* which are strings representing the groups the user belongs to
 
 The structure of the filesystem is as follows
 
-1. **users** directory stores login information in file named `<usernamehash>` with value `<passwordhash>`
-2. **users** directory stores groups`usernamehash-groups` with value `<grouphash>` separated by newlines
-3. **groups** directory stores groups `groupnamehash` with value `<groupname>`
+1. **users** directory stores login information in file hash `<username>:<domain>` with value hashed from `<password>:<userid>:<domain>`
+2. **udata** directory stores groups`<userId>` with users data like groups, domain etc.
 
-Thus, only group names can be obtained in plain text format through this interface.
 
 ```javascript
 {
-   "users":{"8a8202365df345876f77d7c4a5e192d484f1f68ad38d75c79d4737d2af93cf49":"9930f4bd8f81c27eb03a1ca9703e24c5f0ebee067c981942f516263d8191bb29",
-            "8a8202365df345876f77d7c4a5e192d484f1f68ad38d75c79d4737d2af93cf49-groups":"8a8202365df345876f77d7c4a5e192d484f1f68ad38d75c79d4737d2af93cf49\n",
-            "80dda3dcbcfea291d5c71fbd73d908118ccbb5d0b4155a00bbf03fdf471c8cb6":"e9cb79df963a6adb128648e29917d84eb2f30ff41f210277099ca256f41262cf",
-            "80dda3dcbcfea291d5c71fbd73d908118ccbb5d0b4155a00bbf03fdf471c8cb6-groups":"80dda3dcbcfea291d5c71fbd73d908118ccbb5d0b4155a00bbf03fdf471c8cb6"},
-  "groups":{"13fd8ac57db810ff8040a5bb7f51bc2525782b07d28ba33dbc3a1d6a3131f727":"common"}
+   "users":{"< hash of username+domain>":"<password hash>:userid:domain",
+            "< hash of username2+domain>":"<password hash for user 2>:userid2:domain",
+             ...},
+   "udata":{"userid": { ... user data .... },
+            "userid2": { ... user data .... },}
 }
 ```
 
