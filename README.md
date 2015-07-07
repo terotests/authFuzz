@@ -36,10 +36,19 @@ authFuzz requires [jayFuzz](https://github.com/terotests/jayFuzz) filesystem dir
 
 // create a filesystem with root
 var filesystem = fsServerMemory("pwServerName");
-var root = filesystem.getRootFolder();
+// var filesystem = fsServerIndexedDB("indexeDbServerName");
 
-// then give the filesystem to the authentication module
-var auth = authFuzz(root);
+filesystem.then(
+    function() {
+        var root = filesystem.getRootFolder();
+        var auth = authFuzz(root);
+
+        auth.createUser("myUser", "myPassword", "myId", "domain100")
+            .then( function(r) {
+            
+            })
+    });
+            
 
 ```
 
@@ -56,26 +65,35 @@ var auth = authFuzz(root, "mySecretKey2187987");
 
 ## Creating users:
 
+createUser accepts following paramters:
+1. username
+2. password
+3. ID of the user (if not given, created automatically)
+4. Domain (if not given, "" is used)
+
 ```javascript
-auth.createUser("myUser", "myPassword")
-    .then( function() {
+auth.createUser("myUser", "myPassword", "userId", "domain.com")
+    .then( function(res) {
         // user has been created
+        var userId = res.userId; // to get the created userid
     })
 ```
 
-## Creating groups:
+The result value has `userId` which should be used in other API calls to refer to the user.
+
+## Adding user to group
 
 ```javascript
-auth.createGroup("common")
+auth.addUserToGroup( userId, "groupname")
     .then( function() {
-        // user has been created
+        // ... done
     })
 ```
 
 ## Authenticating user
 
 ```javascript
-auth.login("myUser", "myPassword")
+auth.login("myUser", "myPassword", "domain")
     .then( function(response) {
         if(response.result === true) {
             console.log("login successfull");
@@ -83,21 +101,11 @@ auth.login("myUser", "myPassword")
     })
 ```
 
-## Adding users to group
-
-```javascript
-auth.addUserToGroup("secondUser", "common")
-    .then( function() {
-        // user added to group
-    });
-```
 
 ## Removing user from group
 
-User always has his own ID as a group, can not be removed from there
-
 ```javascript
-auth.removeUserGroup("secondUser", "common")
+auth.removeUserGroup(userID, "groupName")
     .then( function() {
         // user removed from group
     });
@@ -106,13 +114,23 @@ auth.removeUserGroup("secondUser", "common")
 ## Listing group ID's the user belongs to
 
 ```javascript
-auth.getUserGroups( "secondUser")
+auth.getUserGroups( "userID")
     .then( function(list) {
         // list = array of group IDs
         // array in format
         // { id : <id>, name : <groupname>}
     });
 ```
+
+## Get user data
+
+```javascript
+auth.getUserData( "userID")
+    .then( function(data) {
+        
+    });
+```
+   
    
 
 
@@ -244,7 +262,6 @@ auth.getUserGroups( "secondUser")
 - [addUserToGroup](README.md#authFuzz_addUserToGroup)
 - [changePassword](README.md#authFuzz_changePassword)
 - [changeUsername](README.md#authFuzz_changeUsername)
-- [createGroup](README.md#authFuzz_createGroup)
 - [createUser](README.md#authFuzz_createUser)
 - [getUserData](README.md#authFuzz_getUserData)
 - [getUserGroups](README.md#authFuzz_getUserGroups)
@@ -1182,21 +1199,6 @@ return _promise(
         }).fail( function() {
             result( {result:false, text: "Could not change the username"} );  
         });
-    });
-```
-
-### <a name="authFuzz_createGroup"></a>authFuzz::createGroup(groupName)
-
-
-```javascript
-var groupHash = this.hash( groupName );
-var local = this._groups, me = this;
-
-return _promise(
-    function(result) {
-        local.writeFile(groupHash, groupName).then( function() {
-            result( { result : true, text : "group created"});  
-        })
     });
 ```
 

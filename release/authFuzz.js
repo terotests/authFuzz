@@ -927,24 +927,6 @@
         };
 
         /**
-         * @param string groupName
-         */
-        _myTrait_.createGroup = function (groupName) {
-          var groupHash = this.hash(groupName);
-          var local = this._groups,
-              me = this;
-
-          return _promise(function (result) {
-            local.writeFile(groupHash, groupName).then(function () {
-              result({
-                result: true,
-                text: 'group created'
-              });
-            });
-          });
-        };
-
-        /**
          * @param float userName
          * @param float password
          * @param float id
