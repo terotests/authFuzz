@@ -1,8 +1,4 @@
-# authFuzz - documentation out of date :)
-
-`Currently broksen - next version coming soon`
-
-......
+# authFuzz 
 
 Simple authentication filesystem and authentication system for simple filesystem based interfaces and testing purposes.
 
