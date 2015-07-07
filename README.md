@@ -1365,7 +1365,9 @@ return _promise(
     function(result) {
         me.then(
             function() {
-                var local = me._users;
+                var local = me._users,
+                    udata = me._udata;
+                var bOk = false, user_id;
                 local.readFile(userHash)
                     .then( function(value) {
 
@@ -1375,10 +1377,20 @@ return _promise(
 
                         var ok =  ( pwHash == me.hash( password ) );
                         if(ok) {
-                            result( { result : true,  userId : uid,  text : "Login successful"} );
+                            bOk = true;
+                            user_id = uid;
+                            return udata.readFile(uid);
+                            // result( { result : true,  userId : uid,  text : "Login successful"} );
+                        } else {
+                            // result( { result : false,  text : "Login failed"} );
+                        }
+                    })
+                    .then( function(userData) {
+                        if(bOk) {
+                            result( { result : true,  userId : user_id, groups:userData.groups, text : "Login successful"} );
                         } else {
                             result( { result : false,  text : "Login failed"} );
-                        }
+                        }                        
                     })
                     .fail( function() {
                         result( { result : false, text : "Login failed"} );
